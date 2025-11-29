@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>驾驶员服务评价</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Microsoft YaHei', sans-serif; }
+        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; }
+        .container { background: white; border-radius: 15px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); padding: 30px; width: 100%; max-width: 500px; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .header h1 { color: #333; margin-bottom: 10px; font-size: 24px; }
+        .header p { color: #666; }
+        .info-card { background: #f8f9fa; border-radius: 10px; padding: 20px; margin-bottom: 25px; border-left: 4px solid #667eea; }
+        .info-item { display: flex; justify-content: space-between; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #eee; }
+        .info-item:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+        .info-label { font-weight: 600; color: #555; }
+        .info-value { color: #333; }
+        .form-group { margin-bottom: 20px; }
+        .rating-options { display: flex; gap: 10px; margin-top: 10px; }
+        .rating-option { flex: 1; text-align: center; }
+        .rating-btn { width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; background: white; cursor: pointer; transition: all 0.3s; font-size: 16px; }
+        .rating-btn.selected { border-color: #667eea; background: #667eea; color: white; }
+        .rating-btn.very-satisfied.selected { background: #4CAF50; border-color: #4CAF50; }
+        .rating-btn.satisfied.selected { background: #2196F3; border-color: #2196F3; }
+        .rating-btn.unsatisfied.selected { background: #f44336; border-color: #f44336; }
+        textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; resize: vertical; min-height: 100px; font-size: 14px; }
+        .submit-btn { width: 100%; padding: 15px; background: #667eea; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; transition: background 0.3s; }
+        .submit-btn:hover { background: #5a6fd8; }
+        .required { color: red; margin-left: 3px; }
+        .success-container { text-align: center; }
+        .success-icon { font-size: 80px; color: #4CAF50; margin-bottom: 20px; }
+        .verification-code { background: #f1f3f4; padding: 15px; border-radius: 8px; margin: 20px 0; font-family: monospace; font-size: 16px; color: #333; }
+        .rating-display { font-size: 18px; font-weight: bold; margin: 15px 0; padding: 10px; border-radius: 6px; }
+        .very-satisfied { color: #4CAF50; }
+        .satisfied { color: #2196F3; }
+        .unsatisfied { color: #f44336; }
+        .back-btn { display: inline-block; padding: 12px 30px; background: #667eea; color: white; text-decoration: none; border-radius: 6px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container" id="evaluationFormContainer">
+        <div class="header">
+            <h1>服务满意度评价</h1>
+            <p>请对本次服务进行评价</p>
+        </div>
+        
+        <div class="info-card" id="driverInfoCard">
+            <!-- 驾驶员信息将通过JavaScript动态填充 -->
+        </div>
+        
+        <form id="evaluationForm">
+            <div class="form-group">
+                <label>综合意见 <span class="required">*</span></label>
+                <div class="rating-options">
+                    <div class="rating-option">
+                        <button type="button" class="rating-btn very-satisfied" data-value="非常满意">非常满意</button>
+                    </div>
+                    <div class="rating-option">
+                        <button type="button" class="rating-btn satisfied" data-value="满意">满意</button>
+                    </div>
+                    <div class="rating-option">
+                        <button type="button" class="rating-btn unsatisfied" data-value="不满意">不满意</button>
+                    </div>
+                </div>
+                <input type="hidden" name="rating" id="rating" required>
+            </div>
+            
+            <div class="form-group">
+                <label>意见建议</label>
+                <textarea name="comments" placeholder="请输入您的宝贵意见或建议..."></textarea>
+            </div>
+            
+            <button type="submit" class="submit-btn">提交评价</button>
+        </form>
+    </div>
+
+    <div class="container success-container" id="successContainer" style="display: none;">
+        <div class="success-icon">✓</div>
+        <h1>评价提交成功</h1>
+        <p>感谢您的评价，您的反馈对我们非常重要！</p>
+        
+        <div class="rating-display" id="ratingDisplay"></div>
+        
+        <p>评价验证追溯码：</p>
+        <div class="verification-code" id="verificationCode"></div>
+        <p style="font-size: 14px; color: #888;">请妥善保存此验证码，以便后续查询</p>
+        
+        <a href="javascript:void(0)" onclick="location.reload()" class="back-btn">继续评价</a>
+    </div>
+
+    <script>
+        // 从URL参数获取驾驶员信息
+        const urlParams = new URLSearchParams(window.location.search);
+        const driverId = urlParams.get('driverId');
+        
+        // 驾驶员数据
+        const drivers = {
+            'DRV001': { name: '张三', department: '运输服务部', date: '2024-01-15 14:30' },
+            'DRV002': { name: '李四', department: '客运服务部', date: '2024-01-16 09:15' },
+            'DRV003': { name: '王五', department: '物流服务部', date: '2024-01-16 16:45' },
+            '7GzRR1FF2D7ayQlr3Nv': { name: '测试驾驶员', department: '测试部门', date: new Date().toLocaleString() }
+        };
+        
+        // 显示驾驶员信息
+        function displayDriverInfo() {
+            const driver = drivers[driverId] || { name: '未知', department: '未知部门', date: '未知时间' };
+            
+            document.getElementById('driverInfoCard').innerHTML = `
+                <div class="info-item">
+                    <span class="info-label">服务部门：</span>
+                    <span class="info-value">${driver.department}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">服务时间：</span>
+                    <span class="info-value">${driver.date}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">驾驶员：</span>
+                    <span class="info-value">${driver.name}</span>
+                </div>
+            `;
+        }
+        
+        // 评分选择逻辑
+        document.querySelectorAll('.rating-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.rating-btn').forEach(b => {
+                    b.classList.remove('selected');
+                });
+                this.classList.add('selected');
+                document.getElementById('rating').value = this.getAttribute('data-value');
+            });
+        });
+        
+        // 表单提交
+        document.getElementById('evaluationForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const rating = document.getElementById('rating').value;
+            if (!rating) {
+                alert('请选择综合意见');
+                return;
+            }
+            
+            const comments = document.querySelector('textarea').value;
+            
+            // 生成验证码
+            const verificationCode = driverId + '_' + Date.now() + '_' + 
+                Math.random().toString(36).substring(2, 10).toUpperCase();
+            
+            // 显示成功页面
+            document.getElementById('evaluationFormContainer').style.display = 'none';
+            document.getElementById('successContainer').style.display = 'block';
+            
+            document.getElementById('ratingDisplay').textContent = '您的评价：' + rating;
+            document.getElementById('ratingDisplay').className = 'rating-display ' + 
+                (rating === '非常满意' ? 'very-satisfied' : 
+                 rating === '满意' ? 'satisfied' : 'unsatisfied');
+            document.getElementById('verificationCode').textContent = verificationCode;
+            
+            // 保存评价数据到本地存储（可选）
+            const evaluationData = {
+                driverId: driverId,
+                rating: rating,
+                comments: comments,
+                verificationCode: verificationCode,
+                timestamp: new Date().toISOString()
+            };
+            
+            // 在控制台显示数据（实际使用中可以发送到服务器）
+            console.log('评价数据:', evaluationData);
+            alert('评价已提交！验证码：' + verificationCode);
+            
+            // 可选：发送数据到您的服务器
+            // sendToServer(evaluationData);
+        });
+        
+        // 发送数据到服务器的函数（可选）
+        function sendToServer(data) {
+            // 这里可以添加代码将数据发送到您的Java后端
+            // 示例：
+            /*
+            fetch('http://您的服务器地址/api/save-evaluation', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                console.log('数据保存成功:', result);
+            })
+            .catch(error => {
+                console.error('数据保存失败:', error);
+            });
+            */
+        }
+        
+        // 页面加载时显示驾驶员信息
+        displayDriverInfo();
+    </script>
+</body>
+</html>
